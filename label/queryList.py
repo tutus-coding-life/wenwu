@@ -4,6 +4,8 @@ from models import RelicOverview
 import time
 import numpy as np
 
+
+
 def fetch_cultural_heritage(page=1):
     url = 'https://digicol.dpm.org.cn/cultural/queryList'
     headers = {
@@ -29,7 +31,7 @@ def fetch_cultural_heritage(page=1):
 
 
 
-def main():
+def get_all_tag():
     all_data = []
     page = 1
     while page<=1000:  # 你可以调整这个条件来获取更多页面
@@ -61,8 +63,13 @@ def main():
     df.to_excel(output_file, index=False)
     print(f"Data written to {output_file}")
 
+def toDf_querylist(str1,str2,str3):
+     # 将数据转换为DataFrame
+    df= pd.DataFrame([{
+        "MotifAndPattern" : str1,
+        "ObjectType" : str2,
+        "FormAndStructure" : str3
+    } ])
 
    
   
-if __name__ == '__main__':
-    main()
