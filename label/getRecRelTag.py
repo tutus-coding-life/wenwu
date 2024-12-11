@@ -92,8 +92,6 @@ def re():
     # 处理所有数据
     print(f"Total {num_fetched} items'tag fetched.\n{num_not_included} hasn't included")
 
-
-
     # 将数据转换为DataFrame
     df_getRecRelTag = pd.DataFrame([{
         'Number': tag.Number,

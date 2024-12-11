@@ -63,13 +63,7 @@ def get_all_tag():
     df.to_excel(output_file, index=False)
     print(f"Data written to {output_file}")
 
-def toDf_querylist(str1,str2,str3):
-     # 将数据转换为DataFrame
-    df= pd.DataFrame([{
-        "MotifAndPattern" : str1,
-        "ObjectType" : str2,
-        "FormAndStructure" : str3
-    } ])
+
 
    
   
