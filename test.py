@@ -1,20 +1,37 @@
-import requests
+import gradio as gr
 
-url = 'https://api.dify.ai/v1/files/upload'
-headers = {
-    'Authorization': 'Bearer app-eo2OGnlmcVmwdPVuREllSL5d',
-}
+def display_tags():
+    tags = ["缠枝纹", "龙穿花", "凤穿花", "龙凤", "植物纹样", "花卉纹"]
+    tag_html = "".join(f'<div class="tag">{tag}</div>' for tag in tags)
+    return f"""
+    <style>
+        .tags-container {{
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }}
+        .tag {{
+            background-color: #f0f0f0;
+            border-radius: 50%;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 16px;
+            color: #333;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }}
+    </style>
+    <div class="tags-container">
+        {tag_html}
+    </div>
+    """
 
-file_path = "/Users/wujean/Downloads/533.jpg"  # 文件路径
-user_id = "abc-123"  # 用户ID
+iface = gr.Interface(
+    fn=display_tags,
+    inputs=None,
+    outputs=gr.HTML(),
+    title="可选标签集合",
+    description="选择以下标签："
+)
 
-files = {
-    'file': ('533.jpg', open(file_path, 'rb'), 'image/jpeg'),  # 明确指定文件类型
-    'user': (None, user_id),
-}
-
-response = requests.post(url, headers=headers, files=files)
-
-# 打印响应内容
-print(response.status_code)
-print(response.text)
+iface.launch()
