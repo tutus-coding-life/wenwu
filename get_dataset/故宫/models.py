@@ -14,6 +14,4 @@ class Tag:
         self.Number = Number,
         self.MotifAndPattern = MotifAndPattern 
         self.ObjectType = ObjectType
-        self.FormAndStructure = FormAndStructure
-
-        
+        self.FormAndStructure = FormAndStructure    
