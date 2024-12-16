@@ -1,3 +1,8 @@
-./data
-./__MACOSX
-./chromedriver
+# 忽略 data 目录
+/data/
+
+# 忽略 __MACOSX 目录（macOS 系统会生成的目录，包含系统文件）
+__MACOSX/
+
+# 忽略 chromedriver 文件
+chromedriver
