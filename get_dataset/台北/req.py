@@ -66,11 +66,9 @@ def craw(driver, f, t):
 
             except TimeoutException:
                 print(f"UID {i}: 加载超时，等待60秒")
-                time.sleep(60)
                 continue
             except Exception as e:
                 print(f"UID {i}: 出现异常，等待60秒")
-                time.sleep(60)
                 continue
 
     finally:
@@ -90,7 +88,7 @@ def main():
     filename = "relics_taiwan.xlsx"
     range_start = 30070
     range_end = 30120
-    step = 15  # 每次爬取的步长
+    step = 20  # 每次爬取的步长
     all_data = []
 
     for i in range(range_start, range_end, step):
@@ -107,7 +105,6 @@ def main():
             # 确保 driver 被关闭
             if driver:
                 driver.quit()
-        time.sleep(60)
     # 写入 Excel 文件
     to_excel(filename, all_data)
     print(f"完成所有爬取，数据已保存到 {filename}")

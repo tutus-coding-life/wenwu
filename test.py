@@ -3,22 +3,9 @@ from bs4 import BeautifulSoup
 import base64
 import os
 
-# 外部代理配置
-pconfig = {
-    'proxyUser': 'wujean_area-MO',
-    'proxyPass': 'Wujean1220',
-    'proxyHost': 'as.smartproxycn.com',
-    'proxyPort': '1000'
-}
 
 # 本地代理地址 (Clash 或其他工具)
-local_proxy = "http://127.0.0.1:7890"
-
-# 构造 Proxy-Authorization 头
-auth = f"{pconfig['proxyUser']}:{pconfig['proxyPass']}"
-headers = {
-    "Proxy-Authorization": f"Basic {base64.b64encode(auth.encode('utf-8')).decode('utf-8')}"
-}
+local_proxy = "http://127.0.0.1:7901"
 
 # 代理链配置
 proxies = {
@@ -32,7 +19,7 @@ url = "https://digitalarchive.npm.gov.tw/Antique/Content?uid=30070&Dept=U"
 # 提取内容和图片
 try:
     print("发送请求...")
-    response = requests.get(url, headers=headers, proxies=proxies, timeout=10)
+    response = requests.get(url, proxies=proxies, timeout=10)
 
     # 检查响应
     if response.status_code == 200:
