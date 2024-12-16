@@ -1,55 +1,47 @@
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import time
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 import pandas as pd
-from openpyxl import load_workbook
 from tqdm import tqdm
 
+import threading
 
-class RelicOverview_taiwan:
-    def __init__(self, id, name, category, culturalRelicNo, dynasty, centerImage, description):
-        self.id = id
-        self.name = name
-        self.categoryName = category
-        self.culturalRelicNo = culturalRelicNo
-        self.dynastyName = dynasty
-        self.centerImage = centerImage
-        self.description = description
 
-    def __str__(self):
-        return f"Name: {self.name}, Category: {self.categoryName}, Dynasty: {self.dynastyName}, Description: {self.description}, Image: {self.centerImage}"
-# 创建浏览器实例
-def start_browser():
+# 本地代理配置
+LOCAL_PROXY = "http://127.0.0.1:7890"
+
+# 配置 WebDriver
+def start_browser_with_proxy():
     chrome_options = Options()
-    chrome_options.add_argument('--ignore-ssl-error')
-    chrome_options.add_argument('--ignore-certificate-errors')
-    # chrome_options.add_argument('--headless')
-    service = Service("./chromedriver")
+    chrome_options.add_argument(f"--proxy-server={LOCAL_PROXY}")
+    chrome_options.add_argument("--headless")  # 无头模式
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    service = Service("./chromedriver")  # 替换为你的 ChromeDriver 路径
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
-# 爬取f-t范围的url对应文物
-def craw(driver, f, t, filename):
-    uid = -1
+
+# 爬取 f-t 范围的 URL 对应文物
+def craw(driver, f, t):
     all_data = []
     try:
         for i in tqdm(range(f, t)):
             uid = i
-            driver.get(f'https://digitalarchive.npm.gov.tw/Antique/Content?uid={i}&Dept=U')
             try:
-                # 等待网页加载，最长等待5秒
-                wait = WebDriverWait(driver, 5)
+                driver.get(f'https://digitalarchive.npm.gov.tw/Antique/Content?uid={i}&Dept=U')
+                # 等待数据加载完成
+                wait = WebDriverWait(driver, 2)
                 tbody_element = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="collapseExample"]/div/div[1]/table/tbody')))
                 tr_elements = tbody_element.find_elements(By.TAG_NAME, "tr")
                 image = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'ug-item-wrapper')))
                 image_url = image.find_element(By.TAG_NAME, 'img').get_attribute("src")
-                
+
                 # 提取数据
                 name, category, dynasty, description = '', '', '', ''
                 for tr in tr_elements:
@@ -65,60 +57,57 @@ def craw(driver, f, t, filename):
                             description = value
                         elif label == '時代':
                             dynasty = value
-                # 如果没有获取到 '時代' 或 '說明' 数据，设为默认空
-                if not dynasty:
-                    dynasty = ''
-                if not description:
-                    description = ''
 
-                # 将文物信息添加到 all_data 列表
-                all_data.append(RelicOverview_taiwan(i, name, category, '', dynasty, image_url, description))
+                dynasty = dynasty if dynasty else ''
+                description = description if description else ''
+                all_data.append({'ID': uid, 'Name': name, 'Category': category, 'Dynasty': dynasty, 'Description': description, 'Image': image_url})
+
+                time.sleep(1)  # 设置间隔，避免过多请求导致被限制
 
             except TimeoutException:
-                print(f"网页加载超时，跳过 UID={uid}")
-                continue  # 网页加载超时，跳过当前 UID，继续爬取其他数据
+                print(f"UID {i}: 加载超时，等待60秒")
+                continue
             except Exception as e:
-                print(f"遇到其他异常，UID={uid}跳过: {str(e)}")
-                continue  # 遇到其他异常，跳过当前 UID，继续爬取其他数据
+                print(f"UID {i}: 出现异常，等待60秒")
+                continue
 
-    except WebDriverException as e:
-        driver.quit()
-        to_excel(filename, all_data)
-        print(f"浏览器意外关闭，uid={uid}已被访问: {str(e)}")
     finally:
         driver.quit()
-        to_excel(filename, all_data)
-        print(f'uid={uid}已被访问')
 
-# 写入excel文件
+    return all_data
+
+
+# 写入 Excel 文件
 def to_excel(filename, all_data):
-    print(f"Total {len(all_data)} items fetched.")
-    df = pd.DataFrame([{
-        'ID': relic.id,
-        'Name': relic.name,
-        'Category': relic.categoryName,
-        'Dynasty': relic.dynastyName,
-        'Description': relic.description,
-        'Image': relic.centerImage
-    } for relic in all_data])
+    print(f"共爬取到 {len(all_data)} 条数据")
+    df = pd.DataFrame(all_data)
     df.to_excel(filename, index=False)
-    print(f"Data written to {filename}")
+    print(f"数据已写入到 {filename}")
 
-# 异步调用爬虫函数
-async def async_craw(f, t, filename):
-    driver = start_browser()
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, craw, driver, f, t, filename)
-
-# 主函数
 def main():
     filename = "relics_taiwan.xlsx"
-    tasks = []
-    # 这里分成多个任务，并行执行
-    tasks.append(async_craw(30070, 30120, filename))
-    
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.gather(*tasks))
+    range_start = 30070
+    range_end = 30120
+    step = 20  # 每次爬取的步长
+    all_data = []
+
+    for i in range(range_start, range_end, step):
+        print(f"正在爬取 UID {i} 到 {i + step - 1}...")
+
+        driver = None  # 确保 driver 变量在任何情况下都被定义
+        try:
+            driver = start_browser_with_proxy()
+            batch_data = craw(driver, i, min(i + step, range_end))
+            all_data.extend(batch_data)
+        except Exception as e:
+            print(f"UID {i} 到 {i + step - 1} 爬取失败，原因: {e}")
+        finally:
+            # 确保 driver 被关闭
+            if driver:
+                driver.quit()
+    # 写入 Excel 文件
+    to_excel(filename, all_data)
+    print(f"完成所有爬取，数据已保存到 {filename}")
 
 if __name__ == '__main__':
     main()
